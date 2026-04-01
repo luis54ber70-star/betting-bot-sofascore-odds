@@ -1,0 +1,17 @@
+# Datos temporales
+data.zip
+data/*.csv
+*.zip
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+*.egg-info/
+
+# Models (opcional - ya lo commiteas manualmente)
+# models/best_model.pkl
