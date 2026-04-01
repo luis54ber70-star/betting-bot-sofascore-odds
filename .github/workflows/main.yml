@@ -2,9 +2,20 @@ name: Betting Bot Full Pipeline
 
 on:
   schedule:
-    # Se ejecuta cada hora, del minuto 0, entre las 12:00 UTC y las 01:00 UTC del día siguiente
-    # Esto cubre el horario que definiste de forma más limpia.
-    - cron: '0 12-23,0-1 * * *'
+    - cron: '0 12 * * *'    # 7:00 AM México
+    - cron: '0 13 * * *'    # 8:00 AM
+    - cron: '0 14 * * *'    # 9:00 AM
+    - cron: '0 15 * * *'    # 10:00 AM
+    - cron: '0 16 * * *'    # 11:00 AM
+    - cron: '0 17 * * *'    # 12:00 PM
+    - cron: '0 18 * * *'    # 1:00 PM
+    - cron: '0 19 * * *'    # 2:00 PM
+    - cron: '0 20 * * *'    # 3:00 PM
+    - cron: '0 21 * * *'    # 4:00 PM
+    - cron: '0 22 * * *'    # 5:00 PM
+    - cron: '0 23 * * *'    # 6:00 PM
+    - cron: '0 0 * * *'     # 7:00 PM
+    - cron: '0 1 * * *'     # 8:00 PM
   workflow_dispatch:
 
 jobs:
@@ -22,28 +33,29 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # Entrenamiento (Podemos condicionarlo para que no corra cada hora y ahorre tiempo)
+      # Bootstrap + Entrenamiento (una vez al día)
       - name: Bootstrap Data & Retrain Model
         env:
           PYTHONPATH: ${{ github.workspace }}
-          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
         run: |
           python convertir_datos.py
           python -m src.retrain_model
 
-      # Live Scanner (Aquí es donde se envían las alertas)
-      - name: Run Live Scanner
-        env:
-          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }} # <--- ¡IMPORTANTE!
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          PYTHONPATH: ${{ github.workspace }}
-        run: python -m src.live_scanner
-
-      # Solo hacemos Push si hubo cambios reales en el modelo
+      # Push Model y Datos
       - name: Push Model & Data
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          git add data/matches.csv models/best_model.pkl || true
-          git commit -m "Update model and data $(date)" && git push || echo "No changes to commit"
+          if [ -f "models/best_model.pkl" ]; then
+            git add data/matches.csv models/best_model.pkl
+            git commit -m "Update model and data $(date)" || echo "No changes"
+            git push
+          fi
+
+      # Live Scanner cada hora (7AM - 8PM)
+      - name: Run Live Scanner
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m src.live_scanner
