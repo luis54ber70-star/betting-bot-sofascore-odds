@@ -1,0 +1,58 @@
+name: Betting Bot Full Pipeline
+
+on:
+  schedule:
+    - cron: '0 3 * * *'    # Recolección
+    - cron: '0 4 * * *'    # Entrenamiento
+    - cron: '0 * * * *'    # Scanner cada hora
+  workflow_dispatch:
+
+jobs:
+  build_and_run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # Bootstrap Data (siempre)
+      - name: Bootstrap Data
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python convertir_datos.py
+
+      # Retrain Model (siempre en este workflow para pruebas)
+      - name: Retrain Model
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m src.retrain_model
+
+      # Push Model si existe
+      - name: Push Model
+        run: |
+          if [ -f "models/best_model.pkl" ]; then
+            git config --global user.name "GitHub Actions"
+            git config --global user.email "actions@github.com"
+            git add models/best_model.pkl data/matches.csv
+            git commit -m "Update model and data $(date)" || echo "No changes"
+            git push
+            echo "✅ Modelo y datos actualizados"
+          else
+            echo "⚠️ No se generó el modelo"
+          fi
+
+      # Live Scanner
+      - name: Run Live Scanner
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m src.live_scanner
