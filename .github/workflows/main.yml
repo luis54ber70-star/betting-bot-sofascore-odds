@@ -2,7 +2,7 @@ name: Betting Bot Full Pipeline
 
 on:
   schedule:
-    - cron: '0 12 * * *'    # 7:00 AM México (CST → UTC-6)
+    - cron: '0 12 * * *'    # 7:00 AM México
     - cron: '0 13 * * *'    # 8:00 AM
     - cron: '0 14 * * *'    # 9:00 AM
     - cron: '0 15 * * *'    # 10:00 AM
@@ -33,7 +33,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # Bootstrap + Retrain (se ejecuta solo una vez al día para ahorrar recursos)
+      # Bootstrap + Entrenamiento (una vez al día)
       - name: Bootstrap Data & Retrain Model
         env:
           PYTHONPATH: ${{ github.workspace }}
@@ -52,7 +52,7 @@ jobs:
             git push
           fi
 
-      # Live Scanner cada hora (7 AM - 8 PM)
+      # Live Scanner cada hora (7AM - 8PM)
       - name: Run Live Scanner
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
