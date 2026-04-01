@@ -1,7 +1,9 @@
 name: Betting Bot Full Pipeline
+name: Grok with AWK
+ uses: norwd/grawk@v1.1.0
 
 on:
-  schedule:
+ schedule:
     - cron: '0 13-23,0-2 * * *'   # Cada hora de 7AM a 8PM México
   workflow_dispatch:
 
