@@ -2,24 +2,49 @@ import requests
 import pandas as pd
 import time
 from datetime import datetime, timedelta
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+def get_session_with_retries():
+    """Crea sesión con reintentos automáticos para evitar bloqueos"""
+    session = requests.Session()
+    retry = Retry(
+        total=5,
+        backoff_factor=2,
+        status_forcelist=[403, 429, 500, 502, 503, 504]
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
+    return session
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
-    "Accept": "application/json",
-    "Referer": "https://www.sofascore.com/"
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive",
+    "Referer": "https://www.sofascore.com/",
+    "Origin": "https://www.sofascore.com",
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-site"
 }
 
 BASE_URL = "https://api.sofascore.com/api/v1"
 
 def get_live_and_upcoming(limit_hours=24, leagues_focus=None):
     try:
+        session = get_session_with_retries()
         url = f"{BASE_URL}/sport/football/scheduled-events"
         params = {"date": datetime.utcnow().strftime("%Y-%m-%d")}
 
-        response = requests.get(url, headers=HEADERS, params=params, timeout=15)
+        response = session.get(url, headers=HEADERS, params=params, timeout=20)
         
         if response.status_code != 200:
             print(f"Error SofaScore: {response.status_code}")
+            if response.status_code == 403:
+                print("⚠️ SofaScore bloqueó la solicitud (403). Intenta más tarde o verifica tu conexión.")
             return pd.DataFrame()
 
         data = response.json()
@@ -71,8 +96,9 @@ def get_live_and_upcoming(limit_hours=24, leagues_focus=None):
 
 def get_match_statistics(match_id: int):
     try:
+        session = get_session_with_retries()
         url = f"{BASE_URL}/event/{match_id}/statistics"
-        response = requests.get(url, headers=HEADERS, timeout=12)
+        response = session.get(url, headers=HEADERS, timeout=15)
 
         if response.status_code != 200:
             return None
@@ -84,7 +110,7 @@ def get_match_statistics(match_id: int):
             for group in period.get("groups", []):
                 for item in group.get("items", []):
                     name = item.get("name", "").lower()
-                    if "expected" in name and "goal" in name or "xg" in name:
+                    if ("expected" in name and "goal" in name) or "xg" in name:
                         if "home" in item and "away" in item:
                             stats["xg_home"] = float(item.get("home", 0))
                             stats["xg_away"] = float(item.get("away", 0))
@@ -105,7 +131,7 @@ def enrich_with_xg(df: pd.DataFrame) -> pd.DataFrame:
         if stats:
             enriched.at[idx, "xg_home"] = stats.get("xg_home", 0.0)
             enriched.at[idx, "xg_away"] = stats.get("xg_away", 0.0)
-        time.sleep(0.8)
+        time.sleep(1.5)
 
     print(f"✅ Enriquecido con xG: {len(enriched)} partidos")
     return enriched
