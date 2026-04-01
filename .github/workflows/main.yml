@@ -1,10 +1,8 @@
 name: Betting Bot Full Pipeline
-name: Grok with AWK
- uses: norwd/grawk@v1.1.0
 
 on:
- schedule:
-    - cron: '0 13-23,0-2 * * *'   # Cada hora de 7AM a 8PM México
+  schedule:
+    - cron: '0 13-23,0-2 * * *'
   workflow_dispatch:
 
 jobs:
@@ -25,7 +23,6 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # Entrenamiento solo una vez al día (7 AM México)
       - name: Bootstrap Data & Retrain Model
         if: github.event_name == 'schedule' && github.event.schedule == '0 13 * * *'
         env:
@@ -35,7 +32,6 @@ jobs:
           python convertir_datos.py
           python -m src.retrain_model
 
-      # Push solo después del entrenamiento
       - name: Push Model & Data
         if: github.event_name == 'schedule' && github.event.schedule == '0 13 * * *'
         run: |
@@ -45,7 +41,6 @@ jobs:
           git commit -m "Update model and data $(date)" || echo "No changes"
           git push || echo "Nothing to push"
 
-      # Live Scanner cada hora
       - name: Run Live Scanner
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
@@ -53,3 +48,19 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           PYTHONPATH: ${{ github.workspace }}
         run: python -m src.live_scanner
+
+      # === INTEGRACIÓN GROK WITH AWK ===
+      - name: Grok with AWK - Process Scanner Output
+        uses: norwd/grawk@v1.1.0
+        with:
+          program: |
+            /VALUE PICK/ || /Edge:/ {
+                print $0
+            }
+            /Picks encontrados/ {
+                print "\n=== RESUMEN GROK + AWK ==="
+                print $0
+            }
+            END {
+                print "Procesamiento AWK completado a las " strftime("%H:%M:%S")
+            }
