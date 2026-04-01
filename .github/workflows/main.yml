@@ -2,15 +2,18 @@ name: Betting Bot Full Pipeline
 
 on:
   schedule:
-    - cron: '0 13-23,0-2 * * *'   # Cada hora de 7AM a 8PM México (UTC-6)
+    - cron: '0 13-23,0-2 * * *'   # Cada hora de 7:00 AM a 8:00 PM hora México (UTC-6)
   workflow_dispatch:
 
 jobs:
   build_and_run:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}   # necesario para push
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -20,9 +23,9 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # === 1. Bootstrap + Retrain (solo 1 vez al día) ===
+      # === Entrenamiento + Bootstrap SOLO una vez al día (a las 7 AM México) ===
       - name: Bootstrap Data & Retrain Model
-        if: github.event_name == 'schedule' && github.event.schedule == '0 13 * * *'  # Solo a las 7AM México
+        if: github.event_name == 'schedule' && github.event.schedule == '0 13 * * *'
         env:
           PYTHONPATH: ${{ github.workspace }}
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
@@ -30,7 +33,7 @@ jobs:
           python convertir_datos.py
           python -m src.retrain_model
 
-      # === 2. Push Model y Datos (solo si hubo cambios) ===
+      # === Push modelo y datos (solo si hubo cambios y es el entrenamiento diario) ===
       - name: Push Model & Data
         if: github.event_name == 'schedule' && github.event.schedule == '0 13 * * *'
         run: |
@@ -40,7 +43,7 @@ jobs:
           git commit -m "Update model and data $(date)" || echo "No changes to commit"
           git push || echo "Nothing to push"
 
-      # === 3. Live Scanner (cada hora) ===
+      # === Live Scanner cada hora ===
       - name: Run Live Scanner
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
