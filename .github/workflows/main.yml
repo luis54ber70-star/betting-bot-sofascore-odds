@@ -2,20 +2,7 @@ name: Betting Bot Full Pipeline
 
 on:
   schedule:
-    - cron: '0 12 * * *'    # 7:00 AM México
-    - cron: '0 13 * * *'    # 8:00 AM
-    - cron: '0 14 * * *'    # 9:00 AM
-    - cron: '0 15 * * *'    # 10:00 AM
-    - cron: '0 16 * * *'    # 11:00 AM
-    - cron: '0 17 * * *'    # 12:00 PM
-    - cron: '0 18 * * *'    # 1:00 PM
-    - cron: '0 19 * * *'    # 2:00 PM
-    - cron: '0 20 * * *'    # 3:00 PM
-    - cron: '0 21 * * *'    # 4:00 PM
-    - cron: '0 22 * * *'    # 5:00 PM
-    - cron: '0 23 * * *'    # 6:00 PM
-    - cron: '0 0 * * *'     # 7:00 PM
-    - cron: '0 1 * * *'     # 8:00 PM
+    - cron: '0 13-23,0-2 * * *'   # Cada hora de 7AM a 8PM México (UTC-6)
   workflow_dispatch:
 
 jobs:
@@ -33,28 +20,30 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # Bootstrap + Entrenamiento (una vez al día)
+      # === 1. Bootstrap + Retrain (solo 1 vez al día) ===
       - name: Bootstrap Data & Retrain Model
+        if: github.event_name == 'schedule' && github.event.schedule == '0 13 * * *'  # Solo a las 7AM México
         env:
           PYTHONPATH: ${{ github.workspace }}
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
         run: |
           python convertir_datos.py
           python -m src.retrain_model
 
-      # Push Model y Datos
+      # === 2. Push Model y Datos (solo si hubo cambios) ===
       - name: Push Model & Data
+        if: github.event_name == 'schedule' && github.event.schedule == '0 13 * * *'
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          if [ -f "models/best_model.pkl" ]; then
-            git add data/matches.csv models/best_model.pkl
-            git commit -m "Update model and data $(date)" || echo "No changes"
-            git push
-          fi
+          git add data/matches.csv models/best_model.pkl || true
+          git commit -m "Update model and data $(date)" || echo "No changes to commit"
+          git push || echo "Nothing to push"
 
-      # Live Scanner cada hora (7AM - 8PM)
+      # === 3. Live Scanner (cada hora) ===
       - name: Run Live Scanner
         env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           PYTHONPATH: ${{ github.workspace }}
