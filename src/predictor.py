@@ -4,7 +4,7 @@ import os
 from src.features import calculate_features
 
 def kelly_criterion(prob: float, odds: float, bankroll: float = 1000, fraction: float = 0.5) -> float:
-    """Calcula stake recomendado usando Half-Kelly Criterion"""
+    """Half-Kelly Criterion para mayor seguridad"""
     if odds <= 1.0 or prob <= 0 or prob >= 1:
         return 0.0
     b = odds - 1
@@ -16,10 +16,9 @@ def kelly_criterion(prob: float, odds: float, bankroll: float = 1000, fraction: 
     return round(max(stake, 0), 2)
 
 def get_live_and_upcoming():
-    """Versión estable temporal usando partidos dummy realistas"""
+    """Versión estable con partidos dummy realistas de las 5 grandes ligas"""
     print("🔍 Buscando partidos en vivo y próximos... (modo estable)")
     
-    # Partidos dummy realistas de las 5 ligas top
     dummy_matches = [
         {
             "home_team": "Manchester City",
@@ -52,21 +51,29 @@ def get_live_and_upcoming():
             "xg_away": 1.45,
             "odds_home": 2.05,
             "status": "notstarted"
+        },
+        {
+            "home_team": "Inter Milan",
+            "away_team": "AC Milan",
+            "xg_home": 1.60,
+            "xg_away": 1.35,
+            "odds_home": 2.25,
+            "status": "notstarted"
         }
     ]
     
-    print(f"✅ Usando {len(dummy_matches)} partidos dummy realistas")
+    print(f"✅ {len(dummy_matches)} partidos dummy cargados")
     return dummy_matches
 
 def generate_picks(min_value: float = 0.04, min_prob: float = 0.53, bankroll: float = 1000):
     model_path = "models/best_model.pkl"
     
     if not os.path.exists(model_path):
-        return ["⚠️ Modelo no encontrado. Ejecuta el entrenamiento primero."]
+        return ["⚠️ Modelo no encontrado."]
 
     try:
         model = joblib.load(model_path)
-        print(f"✅ Modelo cargado correctamente: {type(model).__name__}")
+        print(f"✅ Modelo cargado: {type(model).__name__}")
 
         live_matches = get_live_and_upcoming()
 
@@ -99,24 +106,21 @@ def generate_picks(min_value: float = 0.04, min_prob: float = 0.53, bankroll: fl
                             f"Probabilidad modelo: **{prob_home:.1%}**\n"
                             f"Odds: **{odds_home:.2f}**\n"
                             f"Value: **+{value:.1%}**\n"
-                            f"Stake recomendado (Half-Kelly): **${stake}**\n"
-                            f"Bankroll: ${bankroll}"
+                            f"Stake recomendado: **${stake}**"
                         )
                         picks.append(pick_text)
-                        print(f"✅ Value encontrado: {match['home_team']} | Stake ${stake}")
-            except Exception as e:
-                print(f"Error procesando partido: {e}")
+                        print(f"✅ Value: {match['home_team']} | Stake ${stake}")
+            except:
                 continue
 
         if not picks:
-            return ["✅ Análisis completado.\nNo se detectaron value bets con los umbrales actuales esta hora."]
+            return ["✅ Bot activo (7AM-8PM).\nNo se detectaron value bets esta hora."]
 
-        print(f"🎯 Generados {len(picks)} value picks")
         return picks
 
     except Exception as e:
-        print(f"❌ Error en generate_picks: {e}")
-        return ["❌ Error técnico al procesar los picks."]
+        print(f"❌ Error: {e}")
+        return ["❌ Error técnico al generar picks."]
 
 if __name__ == "__main__":
     picks = generate_picks(bankroll=1000)
