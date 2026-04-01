@@ -1,17 +1,19 @@
 # Datos temporales
 data.zip
 data/*.csv
-*.zip
 
-# Python
+# Python cache
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.Python
-env/
-venv/
-*.egg-info/
+src/__pycache__/
 
-# Models (opcional - ya lo commiteas manualmente)
-# models/best_model.pkl
+# Entornos
+venv/
+env/
+.env
+
+# Otros
+.DS_Store
+*.log
