@@ -1,5 +1,6 @@
 name: Betting Bot Full Pipeline
-
+- name: Claude Code Action Official
+  uses: anthropics/claude-code-action@v1
 on:
   schedule:
     - cron: '0 13-23,0-2 * * *'
