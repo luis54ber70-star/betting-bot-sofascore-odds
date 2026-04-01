@@ -172,13 +172,24 @@ def process_and_scan():
         except Exception:
             continue
 
+    # ... (todo el código anterior de live_scanner.py se mantiene igual hasta el final)
+
+    # Enviar a Telegram
     if alerts:
         header = f"🏆 <b>BETTING BOT — {len(alerts)} VALUE PICKS</b> ({datetime.now().strftime('%d/%m %H:%M')})\n\n"
         full_msg = header + "\n\n".join(alerts[:7])
         send_telegram(full_msg)
         print(f"✅ {len(alerts)} picks enviados a Telegram")
+        
+        # === NUEVA INTEGRACIÓN AWK ===
+        # Capturamos los logs para procesar con AWK
+        log_output = full_msg + "\n" + "\n".join([f"Edge encontrado en pick {i+1}" for i in range(len(alerts))])
+        from src.awk_processor import process_with_awk
+        process_with_awk(log_output)
+        
     else:
         print("ℹ️ No se encontraron picks con suficiente edge esta hora.")
+        # También puedes procesar logs negativos si quieres
 
 
 if __name__ == "__main__":
