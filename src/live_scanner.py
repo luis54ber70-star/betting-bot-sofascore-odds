@@ -3,7 +3,7 @@ from src.notifier import send_telegram
 
 if __name__ == "__main__":
     print("🚀 Iniciando Live Scanner...")
-    picks = generate_picks()
+    picks = generate_picks(bankroll=1000)
     
     if picks:
         msg = "🏆 **BETTING BOT - VALUE PICKS**\n\n" + "\n\n".join(picks)
