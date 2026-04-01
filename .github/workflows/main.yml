@@ -1,0 +1,65 @@
+name: Betting Bot Pipeline (Collect, Train & Scan)
+
+on:
+  schedule:
+    - cron: '0 3 * * *'    # Recolección diaria a las 3:00 AM
+    - cron: '0 4 * * *'    # Reentrenamiento diario a las 4:00 AM
+    - cron: '0 * * * *'    # Scanner en vivo cada hora
+  workflow_dispatch:       # Ejecución manual
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # --- 1. RECOLECCIÓN DE DATOS (Solo a las 3:00 AM o manual) ---
+      - name: Run historical scraper
+        if: github.event.schedule == '0 3 * * *' || github.event_name == 'workflow_dispatch'
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m src.collect_historical
+
+      - name: Commit and push data
+        if: github.event.schedule == '0 3 * * *' || github.event_name == 'workflow_dispatch'
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add data/matches.csv
+          git commit -m "Update historical data $(date)" || echo "No changes"
+          git push
+
+      # --- 2. REENTRENAMIENTO (Solo a las 4:00 AM o manual) ---
+      - name: Retrain model
+        if: github.event.schedule == '0 4 * * *' || github.event_name == 'workflow_dispatch'
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m src.retrain_model
+
+      - name: Commit and push model
+        if: github.event.schedule == '0 4 * * *' || github.event_name == 'workflow_dispatch'
+        run: |
+          git add models/best_model.pkl
+          git commit -m "Retrained model $(date)" || echo "No changes"
+          git push
+
+      # --- 3. LIVE SCANNER (Cada hora o manual) ---
+      - name: Run live scanner
+        # Este paso corre siempre que el cron sea el de cada hora o cuando lo actives manual
+        if: github.event.schedule == '0 * * * *' || github.event_name == 'workflow_dispatch'
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m src.live_scanner
