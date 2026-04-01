@@ -6,8 +6,8 @@ if __name__ == "__main__":
     picks = generate_picks()
     
     if picks:
-        msg = "🚨 NUEVOS PICKS EN VIVO 🚨\n\n" + "\n".join(picks)
+        msg = "🏆 **BETTING BOT - VALUE PICKS**\n\n" + "\n\n".join(picks)
         send_telegram(msg)
         print("✅ Picks enviados a Telegram")
     else:
-        print("ℹ️ No hay value bets en esta ejecución")
+        print("ℹ️ No hay picks esta hora")
