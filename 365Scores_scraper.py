@@ -130,6 +130,5 @@ class ThreeSixFiveScoresScraper:
             return False
 
 
-# Función de conveniencia para obtener instancia
 def get_scraper(api_key: str = None) -> ThreeSixFiveScoresScraper:
     return ThreeSixFiveScoresScraper(api_key=api_key)
