@@ -8,7 +8,6 @@ import os
 from datetime import datetime
 from typing import List, Dict
 
-# Import del nuevo scraper 365Scores
 from 365scores_scraper import get_scraper
 import config
 
@@ -20,14 +19,12 @@ class LiveScanner:
         self.data_folder = config.DATA_FOLDER
         self.log_file = config.LOG_FILE
         
-        # Crear folder de datos si no existe
         if not os.path.exists(self.data_folder):
             os.makedirs(self.data_folder)
         
         self._log("LiveScanner initialized with 365Scores")
     
     def _log(self, message: str):
-        """Guardar log"""
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         log_entry = f"[{timestamp}] {message}\n"
         
@@ -38,7 +35,6 @@ class LiveScanner:
             print(log_entry.strip())
     
     def scan_live_matches(self) -> List[Dict]:
-        """Escanear partidos en vivo"""
         try:
             self._log("Starting live match scan...")
             matches = self.scraper.get_live_matches(sport="football")
@@ -55,7 +51,6 @@ class LiveScanner:
             return []
     
     def _save_matches(self, matches: List[Dict]):
-        """Guardar partidos en archivo JSON"""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{self.data_folder}/live_matches_{timestamp}.json"
         
@@ -67,7 +62,6 @@ class LiveScanner:
             self._log(f"Error saving matches: {str(e)}")
     
     def analyze_odds(self, matches: List[Dict]) -> List[Dict]:
-        """Analizar cuotas para encontrar oportunidades"""
         opportunities = []
         
         for match in matches:
@@ -96,11 +90,10 @@ class LiveScanner:
                         'timestamp': datetime.now().isoformat()
                     })
         
-        self._log(f"Found {len(opportunities}) betting opportunities")
+        self._log(f"Found {len(opportunities)} betting opportunities")
         return opportunities
     
     def run(self):
-        """Ejecutar el scanner continuamente"""
         self._log("LiveScanner started")
         
         try:
