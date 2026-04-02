@@ -1,4 +1,8 @@
 name: Betting Bot Full Pipeline
+
+ 
+name: Setup Cordova - RedstonePfalz  uses: RedstonePfalz/setup-cordova@0.0.4
+
 on:
   schedule:
     - cron: '0 13-23,0-2 * * *'
